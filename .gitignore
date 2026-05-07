@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# PyInstaller output
+build/
+dist/
+
+# Downloaded tool binaries — Python source is tracked, downloads are not
+tools/**/*.exe
+tools/**/*.dll
+tools/**/*.pdb
+tools/**/*.zip
+tools/**/*.7z
+tools/**/*.pak
+tools/**/version.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

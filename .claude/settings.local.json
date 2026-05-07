@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item *)",
+      "PowerShell(Move-Item *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\sambe\\\\Desktop\\\\_____TOOL_MANAGER\\\\tools\" -Recurse | Where-Object { $_.Extension -eq \".exe\" } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\sambe\\\\Desktop\\\\_____TOOL_MANAGER\\\\tools\" -Recurse | Where-Object { $_.Extension -eq \".exe\" } | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\sambe\\\\Desktop\\\\_____TOOL_MANAGER\\\\assets\" -Recurse -Force | ForEach-Object { $_.FullName })",
+      "Bash(python *)",
+      "Bash(pip install *)",
+      "Bash(dir /b \"C:\\\\Users\\\\sambe\\\\Desktop\\\\_____TOOL_MANAGER\\\\*.py\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\sambe\\\\Desktop\\\\_____TOOL_MANAGER\\\\assets\" -Recurse -File | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\sambe\\\\Desktop\\\\_____TOOL_MANAGER\\\\\", \"\"\\).Replace\\(\"\\\\\", \"/\"\\) })",
+      "Bash(git init *)",
+      "Bash(git remote *)"
+    ]
+  }
+}
