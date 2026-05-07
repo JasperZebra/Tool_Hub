@@ -1,9 +1,10 @@
 import re
 import sys
+import threading
 import urllib.request
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
 
 # ── Version ────────────────────────────────────────────────────────────────────
 APP_VERSION = (0, 1, 1)
@@ -69,28 +70,47 @@ def _fetch_remote_version() -> tuple | None:
     return None
 
 
-class _CheckWorker(QObject):
-    finished = Signal(str, object)
+# ── Signal bridge — single instance, never GC'd, cross-thread safe ────────────
 
-    def run(self):
-        print("[updater] DEBUG: _CheckWorker.run() started", flush=True)
+class _Bridge(QObject):
+    check_done     = Signal(str, object)
+    apply_progress = Signal(int, int)
+    apply_done     = Signal(object)
+
+_bridge = _Bridge()
+
+
+# ── Public API ─────────────────────────────────────────────────────────────────
+
+def start_check(on_result) -> threading.Thread:
+    print("[updater] DEBUG: start_check() called", flush=True)
+    _bridge.check_done.connect(on_result)
+
+    def _run():
+        print("[updater] DEBUG: check thread running", flush=True)
         remote = _fetch_remote_version()
         if remote is None:
-            self.finished.emit("error", None)
+            _bridge.check_done.emit("error", None)
         elif remote > APP_VERSION:
-            print(f"[updater] DEBUG: update_available!", flush=True)
-            self.finished.emit("update_available", remote)
+            print(f"[updater] DEBUG: update_available remote={remote}", flush=True)
+            _bridge.check_done.emit("update_available", remote)
         else:
-            print(f"[updater] DEBUG: up_to_date", flush=True)
-            self.finished.emit("up_to_date", remote)
+            print(f"[updater] DEBUG: up_to_date remote={remote}", flush=True)
+            _bridge.check_done.emit("up_to_date", remote)
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    print("[updater] DEBUG: check thread started", flush=True)
+    return t
 
 
-class _ApplyWorker(QObject):
-    progress = Signal(int, int)
-    finished = Signal(object)
+def start_apply(on_progress, on_finished) -> threading.Thread:
+    print("[updater] DEBUG: start_apply() called", flush=True)
+    _bridge.apply_progress.connect(on_progress)
+    _bridge.apply_done.connect(on_finished)
 
-    def run(self):
-        print(f"[updater] DEBUG: _ApplyWorker.run() started", flush=True)
+    def _run():
+        print(f"[updater] DEBUG: apply thread running — {len(_ALL_FILES)} files", flush=True)
         failed = []
         total = len(_ALL_FILES)
         for i, rel_path in enumerate(_ALL_FILES, 1):
@@ -105,38 +125,11 @@ class _ApplyWorker(QObject):
             except Exception as e:
                 print(f"[updater] DEBUG: FAILED {rel_path}: {e}", flush=True)
                 failed.append(f"{rel_path}: {e}")
-            self.progress.emit(i, total)
+            _bridge.apply_progress.emit(i, total)
         print(f"[updater] DEBUG: apply done failures={failed}", flush=True)
-        self.finished.emit(failed)
+        _bridge.apply_done.emit(failed)
 
-
-def start_check(on_result) -> QThread:
-    print("[updater] DEBUG: start_check() called", flush=True)
-    thread = QThread()
-    worker = _CheckWorker()
-    # Connect output signals before moveToThread, started after
-    worker.finished.connect(on_result)
-    worker.finished.connect(thread.quit)
-    thread.finished.connect(thread.deleteLater)
-    thread.finished.connect(worker.deleteLater)
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
-    thread.start()
-    print("[updater] DEBUG: check thread started", flush=True)
-    return thread
-
-
-def start_apply(on_progress, on_finished) -> QThread:
-    print("[updater] DEBUG: start_apply() called", flush=True)
-    thread = QThread()
-    worker = _ApplyWorker()
-    worker.progress.connect(on_progress)
-    worker.finished.connect(on_finished)
-    worker.finished.connect(thread.quit)
-    thread.finished.connect(thread.deleteLater)
-    thread.finished.connect(worker.deleteLater)
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
-    thread.start()
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
     print("[updater] DEBUG: apply thread started", flush=True)
-    return thread
+    return t
