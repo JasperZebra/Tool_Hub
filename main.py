@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor, QPalette, QIcon
 from game_data import GAMES
 from game_select import GameSelectScreen
 from main_window import MainWindow
+import updater
 
 
 if __name__ == "__main__":
@@ -58,5 +59,8 @@ if __name__ == "__main__":
         stack.setWindowIcon(_qico)
 
     stack.show()
+
+    # Check for updates after the window is visible
+    _update_thread = updater.check_and_prompt(parent=stack)
 
     sys.exit(app.exec())

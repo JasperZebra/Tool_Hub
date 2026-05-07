@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
 )
 
 # ── Version ────────────────────────────────────────────────────────────────────
-# Bump this tuple when releasing a new version of the launcher.
 APP_VERSION = (0, 1, 1)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -53,7 +52,6 @@ _ASSET_FILES = [
 
 _ALL_FILES = _PY_FILES + _ASSET_FILES
 
-# cx_Freeze layout
 if getattr(sys, "frozen", False):
     _EXE_DIR   = Path(sys.executable).parent
     _PY_DIR    = _EXE_DIR / "lib"
@@ -70,52 +68,66 @@ def fmt_version(v: tuple) -> str:
 # ── Remote version fetch ───────────────────────────────────────────────────────
 
 def _fetch_remote_version() -> tuple | None:
-    """Read updater.py from the remote repo and parse APP_VERSION out of it."""
+    url = _RAW_BASE + "updater.py"
+    print(f"[updater] DEBUG: fetching remote version from {url}", flush=True)
     try:
-        url = _RAW_BASE + "updater.py"
         with urllib.request.urlopen(url, timeout=8) as r:
             text = r.read(8192).decode("utf-8", errors="ignore")
+        print(f"[updater] DEBUG: fetched {len(text)} bytes from remote", flush=True)
         m = re.search(r"APP_VERSION\s*=\s*\((\d+),\s*(\d+),\s*(\d+)\)", text)
         if m:
-            return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
-    except Exception:
-        pass
+            ver = (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            print(f"[updater] DEBUG: remote APP_VERSION = {ver}", flush=True)
+            return ver
+        else:
+            print("[updater] DEBUG: APP_VERSION pattern NOT found in remote file", flush=True)
+    except Exception as e:
+        print(f"[updater] DEBUG: network error fetching remote version: {e}", flush=True)
     return None
 
 
 # ── Background workers ─────────────────────────────────────────────────────────
 
 class _CheckWorker(QObject):
-    finished = Signal(str, object)   # ("up_to_date" | "update_available" | "error", remote_ver)
+    finished = Signal(str, object)
 
     def run(self):
+        print("[updater] DEBUG: _CheckWorker.run() started", flush=True)
         remote = _fetch_remote_version()
         if remote is None:
+            print("[updater] DEBUG: result = error (could not fetch remote)", flush=True)
             self.finished.emit("error", None)
         elif remote > APP_VERSION:
+            print(f"[updater] DEBUG: result = update_available  local={APP_VERSION}  remote={remote}", flush=True)
             self.finished.emit("update_available", remote)
         else:
+            print(f"[updater] DEBUG: result = up_to_date  local={APP_VERSION}  remote={remote}", flush=True)
             self.finished.emit("up_to_date", remote)
 
 
 class _ApplyWorker(QObject):
-    progress = Signal(int, int)   # (files_done, files_total)
-    finished = Signal(object)     # list[str] of "file: error" entries
+    progress = Signal(int, int)
+    finished = Signal(object)
 
     def run(self):
+        print(f"[updater] DEBUG: _ApplyWorker.run() started — {len(_ALL_FILES)} files to download", flush=True)
         failed = []
         total = len(_ALL_FILES)
         for i, rel_path in enumerate(_ALL_FILES, 1):
             url  = _RAW_BASE + rel_path
             base = _PY_DIR if rel_path.endswith(".py") else _ASSET_DIR
             dest = base / Path(rel_path)
+            print(f"[updater] DEBUG: downloading ({i}/{total}) {rel_path} → {dest}", flush=True)
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 with urllib.request.urlopen(url, timeout=30) as r:
                     dest.write_bytes(r.read())
+                print(f"[updater] DEBUG: OK {rel_path}", flush=True)
             except Exception as e:
+                print(f"[updater] DEBUG: FAILED {rel_path}: {e}", flush=True)
                 failed.append(f"{rel_path}: {e}")
             self.progress.emit(i, total)
+        print(f"[updater] DEBUG: _ApplyWorker done. failures={failed}", flush=True)
         self.finished.emit(failed)
 
 
@@ -150,19 +162,14 @@ class _ProgressDialog(QDialog):
 
     def set_progress(self, done: int, total: int):
         self._bar.setValue(done)
-        if done <= len(_ALL_FILES):
-            name = _ALL_FILES[done - 1] if done > 0 else ""
-            self._file_label.setText(name)
+        if 0 < done <= len(_ALL_FILES):
+            self._file_label.setText(_ALL_FILES[done - 1])
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def start_check(on_result) -> QThread:
-    """
-    Fire a background version check.
-    on_result(status: str, remote_ver: tuple | None) called on the Qt thread.
-    Keep the returned QThread reference alive until it finishes.
-    """
+    print("[updater] DEBUG: start_check() called — spawning _CheckWorker thread", flush=True)
     thread = QThread()
     worker = _CheckWorker()
     worker.moveToThread(thread)
@@ -176,11 +183,7 @@ def start_check(on_result) -> QThread:
 
 
 def start_apply(on_progress, on_finished) -> QThread:
-    """
-    Fire a background update download.
-    on_progress(done, total) and on_finished(failed) called on Qt thread.
-    Keep the returned QThread reference alive until it finishes.
-    """
+    print("[updater] DEBUG: start_apply() called — spawning _ApplyWorker thread", flush=True)
     thread = QThread()
     worker = _ApplyWorker()
     worker.moveToThread(thread)
@@ -196,25 +199,21 @@ def start_apply(on_progress, on_finished) -> QThread:
 
 def check_and_prompt(parent=None) -> None:
     """
-    Call this once from main.py after the main window is shown.
-
-    Flow:
-      1. Silently checks remote APP_VERSION in a background thread.
-      2. If an update is available → shows a confirmation dialog.
-      3. If the user accepts → shows a progress dialog while downloading all files.
-      4. On success → prompts the user to restart; calls QApplication.quit() so
-         the launcher can be restarted by the user (or a wrapper script).
-      5. Network errors are silently swallowed so startup is never blocked.
+    Call once from main.py after window.show().
+    Silently checks remote APP_VERSION; prompts + downloads if newer.
     """
-    # Keep thread references alive on the module so Qt doesn't GC them early.
+    print(f"[updater] DEBUG: check_and_prompt() called. Local APP_VERSION={APP_VERSION}", flush=True)
     _state = {}
 
     def _on_check(status: str, remote_ver):
+        print(f"[updater] DEBUG: _on_check() fired — status={status!r}  remote_ver={remote_ver}", flush=True)
         if status != "update_available":
-            return  # up_to_date or network error — carry on silently
+            print("[updater] DEBUG: no update needed, doing nothing", flush=True)
+            return
 
         current_str = fmt_version(APP_VERSION)
         remote_str  = fmt_version(remote_ver)
+        print(f"[updater] DEBUG: showing QMessageBox ({current_str} → {remote_str})", flush=True)
 
         reply = QMessageBox.question(
             parent,
@@ -226,6 +225,7 @@ def check_and_prompt(parent=None) -> None:
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes,
         )
+        print(f"[updater] DEBUG: user replied {'Yes' if reply == QMessageBox.Yes else 'No'}", flush=True)
         if reply != QMessageBox.Yes:
             return
 
@@ -234,9 +234,11 @@ def check_and_prompt(parent=None) -> None:
         _state["dlg"] = dlg
 
         def _on_progress(done: int, total: int):
+            print(f"[updater] DEBUG: progress {done}/{total}", flush=True)
             dlg.set_progress(done, total)
 
         def _on_finished(failed: list):
+            print(f"[updater] DEBUG: apply finished. failed={failed}", flush=True)
             dlg.accept()
             if failed:
                 err_list = "\n".join(failed[:10])
@@ -258,3 +260,4 @@ def check_and_prompt(parent=None) -> None:
         _state["thread"] = start_apply(_on_progress, _on_finished)
 
     _state["check_thread"] = start_check(_on_check)
+    print(f"[updater] DEBUG: check thread started. _state keys={list(_state.keys())}", flush=True)
