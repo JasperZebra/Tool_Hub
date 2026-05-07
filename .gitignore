@@ -2,9 +2,8 @@
 __pycache__/
 *.py[cod]
 
-# PyInstaller output
+# Build output (cx_Freeze)
 build/
-dist/
 
 # Downloaded tool binaries — Python source is tracked, downloads are not
 tools/**/*.exe
@@ -26,4 +25,7 @@ Thumbs.db
 # Local dev
 agent.md
 .claude/
-*.spec
+
+# Build scripts
+setup.py
+build_tool_hub.bat

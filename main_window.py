@@ -11,8 +11,9 @@ from PySide6.QtGui import QShortcut, QKeySequence, QPixmap
 from background import Background
 from carousel import Carousel
 from detail_panel import DetailPanel
+from paths import ASSET_ROOT
 
-TOOL_ICON_DIR = Path(__file__).parent / "assets" / "tool_icons"
+TOOL_ICON_DIR = ASSET_ROOT / "assets" / "tool_icons"
 
 
 def _load_tool_icon(tool: dict) -> QPixmap | None:

@@ -7,7 +7,9 @@ from PySide6.QtGui import (
     QTransform, QFont, QPen, QPainterPath, QConicalGradient
 )
 
-ICON_DIR = Path(__file__).parent / "assets" / "tool_icons"
+from paths import ASSET_ROOT
+
+ICON_DIR = ASSET_ROOT / "assets" / "tool_icons"
 
 
 def generate_card_image(tool: dict, w: int, h: int) -> QPixmap:
@@ -211,9 +213,6 @@ class ToolCard(QWidget):
         refl_pix = QPixmap(cw, rh)
         refl_pix.fill(Qt.transparent)
 
-        # Only sample the top portion of the flipped pixmap that corresponds
-        # to rh screen pixels, so the source and destination share the same
-        # aspect ratio and nothing gets stretched.
         src_h = int(self.CARD_H * rh / ch)
 
         rp = QPainter(refl_pix)
@@ -228,7 +227,6 @@ class ToolCard(QWidget):
         rp.fillRect(0, 0, cw, rh, mask)
         rp.end()
 
-        # Very slight downsample blur — scale to half then back up.
         blurred = refl_pix.scaled(
             max(1, cw // 2), max(1, rh // 2),
             Qt.IgnoreAspectRatio, Qt.SmoothTransformation

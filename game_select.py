@@ -9,9 +9,10 @@ from PySide6.QtGui import (
 )
 
 from background import Background
+from paths import ASSET_ROOT
 from updater import APP_VERSION, fmt_version, start_check, start_apply
 
-GAME_ICON_DIR = Path(__file__).parent / "assets" / "game_icons"
+GAME_ICON_DIR = ASSET_ROOT / "assets" / "game_icons"
 
 
 def _generate_game_banner(game: dict, w: int, h: int) -> QPixmap:

@@ -26,6 +26,7 @@ _PY_FILES = [
     "game_select.py",
     "main.py",
     "main_window.py",
+    "paths.py",
     "updater.py",
 ]
 
@@ -52,7 +53,15 @@ _ASSET_FILES = [
 
 _ALL_FILES = _PY_FILES + _ASSET_FILES
 
-_APP_DIR = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
+# cx_Freeze puts loose .py files in lib/ next to the exe.
+# Assets (icons etc.) live in the exe's root folder.
+if getattr(sys, "frozen", False):
+    _EXE_DIR   = Path(sys.executable).parent   # build/Tool_Hub/
+    _PY_DIR    = _EXE_DIR / "lib"              # build/Tool_Hub/lib/  ← where .py files live
+    _ASSET_DIR = _EXE_DIR                      # build/Tool_Hub/      ← where assets/ lives
+else:
+    _PY_DIR    = Path(__file__).parent
+    _ASSET_DIR = Path(__file__).parent
 
 
 def fmt_version(v: tuple) -> str:
@@ -99,8 +108,10 @@ class _ApplyWorker(QObject):
         failed = []
         total = len(_ALL_FILES)
         for i, rel_path in enumerate(_ALL_FILES, 1):
-            url = _RAW_BASE + rel_path
-            dest = _APP_DIR / Path(rel_path)
+            url  = _RAW_BASE + rel_path
+            # .py files go into lib/, everything else (assets) goes into the exe root
+            base = _PY_DIR if rel_path.endswith(".py") else _ASSET_DIR
+            dest = base / Path(rel_path)
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 with urllib.request.urlopen(url, timeout=30) as r:

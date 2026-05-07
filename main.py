@@ -14,7 +14,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    _base = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
+    _base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).parent
     _ico = _base / "assets" / "main_tool_icon" / "tool_hub.ico"
 
     palette = QPalette()
