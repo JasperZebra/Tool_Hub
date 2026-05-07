@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 # ── Version ────────────────────────────────────────────────────────────────────
-APP_VERSION = (0, 1, 0)
+APP_VERSION = (0, 1, 1)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 _RAW_BASE = "https://raw.githubusercontent.com/JasperZebra/Tool_Hub/main/"
@@ -261,3 +261,4 @@ def check_and_prompt(parent=None) -> None:
 
     _state["check_thread"] = start_check(_on_check)
     print(f"[updater] DEBUG: check thread started. _state keys={list(_state.keys())}", flush=True)
+    return _state  # caller MUST hold this reference or threads get GC'd
