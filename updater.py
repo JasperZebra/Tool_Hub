@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 # ── Version ────────────────────────────────────────────────────────────────────
-APP_VERSION = (0, 1, 1)
+APP_VERSION = (0, 1, 0)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 _RAW_BASE = "https://raw.githubusercontent.com/JasperZebra/Tool_Hub/main/"
