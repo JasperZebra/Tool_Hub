@@ -7,7 +7,7 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 # ── Version ────────────────────────────────────────────────────────────────────
 # Bump this tuple when releasing a new version of the launcher.
-APP_VERSION = (0, 1, 3)
+APP_VERSION = (0, 1, 4)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Raw GitHub URL pointing to the main branch of the Tool Hub repo.
