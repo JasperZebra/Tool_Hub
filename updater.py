@@ -91,7 +91,7 @@ class _ProgressDialog(QDialog):
         self.setFixedWidth(440)
         self.setModal(True)
 
-        self._title = QLabel("Downloading update, please do not close…")
+        self._title = QLabel("Downloading update, please wait . . .")
         self._title.setAlignment(Qt.AlignCenter)
         self._title.setStyleSheet("font-family: Consolas; font-size: 11px; color: rgba(200,220,255,220);")
 
