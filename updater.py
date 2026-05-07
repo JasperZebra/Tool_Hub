@@ -130,6 +130,8 @@ class _ProgressDialog(QDialog):
             self._title.setText("✓  Update complete — please restart Tool Hub.")
             self._file_lbl.setText("")
         self._bar.setValue(len(_ALL_FILES))
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(1000, self.accept)
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
