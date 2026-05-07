@@ -7,12 +7,12 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 # ── Version ────────────────────────────────────────────────────────────────────
 # Bump this tuple when releasing a new version of the launcher.
-APP_VERSION = (0, 1, 4)
+APP_VERSION = (0, 1, 5)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Raw GitHub URL pointing to the main branch of the Tool Hub repo.
 # Change OWNER and REPO to match your GitHub repository.
-_RAW_BASE = "https://raw.githubusercontent.com/JasperZebra/Tool_Hub/main/updater.py"
+_RAW_BASE = "https://raw.githubusercontent.com/JasperZebra/Tool_Hub/main/"
 
 # Launcher .py files to download on update. Does NOT touch anything under tools/.
 _PY_FILES = [
