@@ -282,7 +282,7 @@ class GameSelectScreen(QWidget):
     def _do_update(self):
         self._update_btn.setText("↓  UPDATING...")
         self._update_btn.setEnabled(False)
-        self._apply_thread = start_apply(self._on_apply_progress, self._on_apply_done)
+        self._apply_thread = start_apply(self._on_apply_progress, self._on_apply_done, parent=self)
 
     def _on_apply_progress(self, done: int, total: int):
         self._update_btn.setText(f"↓  UPDATING  {done}/{total}")
