@@ -7,7 +7,7 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 # ── Version ────────────────────────────────────────────────────────────────────
 # Bump this tuple when releasing a new version of the launcher.
-APP_VERSION = (0, 1, 6)
+APP_VERSION = (0, 1, 1)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Raw GitHub URL pointing to the main branch of the Tool Hub repo.
@@ -53,12 +53,14 @@ _ASSET_FILES = [
 
 _ALL_FILES = _PY_FILES + _ASSET_FILES
 
-# cx_Freeze puts loose .py files in lib/ next to the exe.
-# Assets (icons etc.) live in the exe's root folder.
+# cx_Freeze layout:
+#   exe root         → ToolHub.exe, assets/
+#   lib/             → library.zip (stdlib) + loose .py files (our app modules,
+#                      because we use zip_exclude_packages in setup.py)
 if getattr(sys, "frozen", False):
     _EXE_DIR   = Path(sys.executable).parent   # build/Tool_Hub/
-    _PY_DIR    = _EXE_DIR / "lib"              # build/Tool_Hub/lib/  ← where .py files live
-    _ASSET_DIR = _EXE_DIR                      # build/Tool_Hub/      ← where assets/ lives
+    _PY_DIR    = _EXE_DIR / "lib"              # build/Tool_Hub/lib/
+    _ASSET_DIR = _EXE_DIR                      # build/Tool_Hub/
 else:
     _PY_DIR    = Path(__file__).parent
     _ASSET_DIR = Path(__file__).parent
