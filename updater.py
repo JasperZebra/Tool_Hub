@@ -69,13 +69,11 @@ def _fetch_remote_version() -> tuple | None:
     return None
 
 
-# ── Workers ────────────────────────────────────────────────────────────────────
-
 class _CheckWorker(QObject):
     finished = Signal(str, object)
 
     def run(self):
-        print("[updater] DEBUG: _CheckWorker running", flush=True)
+        print("[updater] DEBUG: _CheckWorker.run() started", flush=True)
         remote = _fetch_remote_version()
         if remote is None:
             self.finished.emit("error", None)
@@ -92,7 +90,7 @@ class _ApplyWorker(QObject):
     finished = Signal(object)
 
     def run(self):
-        print(f"[updater] DEBUG: _ApplyWorker running — {len(_ALL_FILES)} files", flush=True)
+        print(f"[updater] DEBUG: _ApplyWorker.run() started", flush=True)
         failed = []
         total = len(_ALL_FILES)
         for i, rel_path in enumerate(_ALL_FILES, 1):
@@ -112,19 +110,19 @@ class _ApplyWorker(QObject):
         self.finished.emit(failed)
 
 
-# ── Public API ─────────────────────────────────────────────────────────────────
-
 def start_check(on_result) -> QThread:
     print("[updater] DEBUG: start_check() called", flush=True)
     thread = QThread()
     worker = _CheckWorker()
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
+    # Connect output signals before moveToThread, started after
     worker.finished.connect(on_result)
     worker.finished.connect(thread.quit)
     thread.finished.connect(thread.deleteLater)
     thread.finished.connect(worker.deleteLater)
+    worker.moveToThread(thread)
+    thread.started.connect(worker.run)
     thread.start()
+    print("[updater] DEBUG: check thread started", flush=True)
     return thread
 
 
@@ -132,12 +130,13 @@ def start_apply(on_progress, on_finished) -> QThread:
     print("[updater] DEBUG: start_apply() called", flush=True)
     thread = QThread()
     worker = _ApplyWorker()
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
     worker.progress.connect(on_progress)
     worker.finished.connect(on_finished)
     worker.finished.connect(thread.quit)
     thread.finished.connect(thread.deleteLater)
     thread.finished.connect(worker.deleteLater)
+    worker.moveToThread(thread)
+    thread.started.connect(worker.run)
     thread.start()
+    print("[updater] DEBUG: apply thread started", flush=True)
     return thread
