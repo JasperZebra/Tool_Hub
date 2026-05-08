@@ -8,7 +8,7 @@ from PySide6.QtCore import QObject, Signal, Qt, QTimer
 from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QVBoxLayout
 
 # ── Version ────────────────────────────────────────────────────────────────────
-APP_VERSION = (0, 1, 2)
+APP_VERSION = (0, 1, 3)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 _RAW_BASE = "https://raw.githubusercontent.com/JasperZebra/Tool_Hub/main/"
