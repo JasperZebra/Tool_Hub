@@ -1,6 +1,14 @@
 import sys
 import ctypes
 from pathlib import Path
+
+# ── When frozen, put the exe directory at the FRONT of sys.path so any
+#    .py files downloaded by the updater shadow the bundled library.zip ────────
+if getattr(sys, "frozen", False):
+    _exe_dir = str(Path(sys.executable).parent)
+    if _exe_dir not in sys.path:
+        sys.path.insert(0, _exe_dir)
+
 from PySide6.QtWidgets import QApplication, QStackedWidget
 from PySide6.QtGui import QColor, QPalette, QIcon
 
@@ -58,5 +66,4 @@ if __name__ == "__main__":
         stack.setWindowIcon(_qico)
 
     stack.show()
-
     sys.exit(app.exec())

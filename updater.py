@@ -4,8 +4,8 @@ import threading
 import urllib.request
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Signal, Qt
-from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QVBoxLayout, QApplication
+from PySide6.QtCore import QObject, Signal, Qt, QTimer
+from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QVBoxLayout
 
 # ── Version ────────────────────────────────────────────────────────────────────
 APP_VERSION = (0, 1, 1)
@@ -42,7 +42,8 @@ _ALL_FILES = _PY_FILES + _ASSET_FILES
 
 if getattr(sys, "frozen", False):
     _EXE_DIR   = Path(sys.executable).parent
-    _PY_DIR    = _EXE_DIR / "lib"
+    # .py files go to exe root — sys.path puts this first so they override the zip
+    _PY_DIR    = _EXE_DIR
     _ASSET_DIR = _EXE_DIR
 else:
     _PY_DIR    = Path(__file__).parent
@@ -76,29 +77,23 @@ class _Bridge(QObject):
 _bridge = _Bridge()
 
 
-# ── Progress dialog — modal, no close button ───────────────────────────────────
+# ── Progress dialog ────────────────────────────────────────────────────────────
 
 class _ProgressDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Downloading Update")
-        self.setWindowFlags(
-            Qt.Dialog |
-            Qt.CustomizeWindowHint |
-            Qt.WindowTitleHint
-            # no Qt.WindowCloseButtonHint → close button disabled
-        )
+        self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
         self.setFixedWidth(440)
         self.setModal(True)
 
-        self._title = QLabel("Downloading update, please wait . . .")
+        self._title = QLabel("Downloading update, please do not close…")
         self._title.setAlignment(Qt.AlignCenter)
         self._title.setStyleSheet("font-family: Consolas; font-size: 11px; color: rgba(200,220,255,220);")
 
         self._bar = QProgressBar()
         self._bar.setRange(0, len(_ALL_FILES))
         self._bar.setValue(0)
-        self._bar.setTextVisible(True)
 
         self._file_lbl = QLabel("Starting…")
         self._file_lbl.setAlignment(Qt.AlignCenter)
@@ -112,8 +107,7 @@ class _ProgressDialog(QDialog):
         layout.addWidget(self._file_lbl)
 
     def closeEvent(self, event):
-        # Block close while downloading
-        event.ignore()
+        event.ignore()  # block close while downloading
 
     def set_progress(self, done: int, total: int):
         self._bar.setValue(done)
@@ -121,8 +115,7 @@ class _ProgressDialog(QDialog):
             self._file_lbl.setText(_ALL_FILES[done - 1])
 
     def mark_done(self, failed: list):
-        # Re-enable closing once done
-        self.closeEvent = lambda e: e.accept()
+        self.closeEvent = lambda e: e.accept()  # re-enable closing
         if failed:
             self._title.setText("⚠  Some files failed to download.")
             self._file_lbl.setText("\n".join(failed[:5]))
@@ -130,7 +123,6 @@ class _ProgressDialog(QDialog):
             self._title.setText("✓  Update complete — please restart Tool Hub.")
             self._file_lbl.setText("")
         self._bar.setValue(len(_ALL_FILES))
-        from PySide6.QtCore import QTimer
         QTimer.singleShot(1000, self.accept)
 
 
@@ -154,10 +146,6 @@ def start_check(on_result) -> threading.Thread:
 
 
 def start_apply(on_progress, on_finished, parent=None) -> threading.Thread:
-    """
-    Shows a modal progress dialog that blocks the user from closing the app
-    mid-download. on_progress and on_finished are still called as before.
-    """
     dlg = _ProgressDialog(parent)
     dlg.show()
 
